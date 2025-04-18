@@ -137,4 +137,5 @@ export default async function handler(req, res) {
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 10, // optional: allows more time for async work
 };
