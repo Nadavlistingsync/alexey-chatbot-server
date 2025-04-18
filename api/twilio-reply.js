@@ -82,8 +82,9 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const from = body.From;
-    const message = body.Body;
+    const from = body.from.phone_number;
+    const message = body.text;
+    const to = body.to[0].phone_number;
 
     if (!from || !message) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -94,7 +95,7 @@ export async function POST(req) {
     const reply = generateReply(message);
 
     await telnyx.messages.create({
-      from: body.To,
+      from: to,
       to: from,
       text: reply,
     });
