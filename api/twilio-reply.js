@@ -100,7 +100,12 @@ export default async function handler(req, res) {
     if (isNegative(message)) {
       const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
       try {
-        await telnyx.messages.create({ from: to, to: from, text: reply });
+        await telnyx.messages.create({
+          from: to,
+          to: from,
+          text: reply,
+          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+        });
         appendHistory(from, 'Bot', reply);
       } catch (err) {
         console.error('Telnyx send error (negative):', err);
@@ -117,7 +122,12 @@ export default async function handler(req, res) {
         reply = `Perfect! I'll inform Alexey to reach out to you personally within 24 hours. Thanks for your time!`;
       }
       try {
-        await telnyx.messages.create({ from: to, to: from, text: reply });
+        await telnyx.messages.create({
+          from: to,
+          to: from,
+          text: reply,
+          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+        });
         appendHistory(from, 'Bot', reply);
       } catch (err) {
         console.error('Telnyx send error (positive):', err);
@@ -128,7 +138,12 @@ export default async function handler(req, res) {
     // GPT fallback
     const reply = await generateReplyWithGPT(message, from);
     try {
-      await telnyx.messages.create({ from: to, to: from, text: reply });
+      await telnyx.messages.create({
+        from: to,
+        to: from,
+        text: reply,
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+      });
       appendHistory(from, 'Bot', reply);
     } catch (err) {
       console.error('Telnyx send error (fallback):', err);
