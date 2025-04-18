@@ -1,0 +1,24 @@
+{
+  "name": "alexey-chatbot-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://Nadavlistingsync@github.com/Nadavlistingsync/alexey-chatbot-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nadavlistingsync/alexey-chatbot-server/issues"
+  },
+  "homepage": "https://github.com/Nadavlistingsync/alexey-chatbot-server#readme",
+  "description": "",
+  "dependencies": {
+    "openai": "^4.95.1",
+    "telnyx": "^2.0.0"
+  }
+}
