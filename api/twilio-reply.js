@@ -1,4 +1,3 @@
-export const config = { runtime: 'edge' };
 import Telnyx from 'telnyx';
 import OpenAI from 'openai';
  
@@ -72,7 +71,7 @@ async function generateReplyWithGPT(message, from) {
   return completion.choices[0].message.content.trim();
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
     const body = await req.json();
     // Support both Telnyx and Twilio incoming shapes
@@ -81,7 +80,7 @@ export default async function handler(req) {
     const to = Array.isArray(body.to) ? body.to[0].phone_number : body.To;
 
     if (!from || !message) {
-      return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400 });
+      return res.status(400).json({ error: 'Missing fields' });
     }
 
     // Append user message
@@ -89,7 +88,7 @@ export default async function handler(req) {
 
     // Keyword-based early exits
     if (isListed(message)) {
-      return new Response(JSON.stringify({ status: 'Flagged as listed - no reply' }), { status: 200 });
+      return res.status(200).json({ status: 'Flagged as listed - no reply' });
     }
     if (isNegative(message)) {
       const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
@@ -99,7 +98,7 @@ export default async function handler(req) {
       } catch (err) {
         console.error('Telnyx send error (negative):', err);
       }
-      return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
+      return res.status(200).json({ status: 'Message sent', reply });
     }
     if (isPositive(message)) {
       // Two-step staging via history count
@@ -116,7 +115,7 @@ export default async function handler(req) {
       } catch (err) {
         console.error('Telnyx send error (positive):', err);
       }
-      return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
+      return res.status(200).json({ status: 'Message sent', reply });
     }
 
     // GPT fallback
@@ -128,10 +127,10 @@ export default async function handler(req) {
       console.error('Telnyx send error (fallback):', err);
     }
     
-    return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
+    return res.status(200).json({ status: 'Message sent', reply });
   } catch (error) {
     console.error('Handler error:', error);
     // Return actual error details for debugging
-    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), { status: 500 });
+    return res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
