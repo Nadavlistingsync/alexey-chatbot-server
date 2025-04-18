@@ -73,12 +73,7 @@ async function generateReplyWithGPT(message, from) {
 
 export default async function handler(req, res) {
   try {
-  const chunks = [];
-  for await (const chunk of req.body) {
-    chunks.push(chunk);
-  }
-  const rawBody = Buffer.concat(chunks).toString('utf8');
-  const body = JSON.parse(rawBody);
+    const body = req.body;
     // Support both Telnyx and Twilio incoming shapes
     const message = ((body.text || body.Body) || '').trim().toLowerCase();
     const from = body.from?.phone_number || body.From;
@@ -139,3 +134,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
+
+export const config = {
+  runtime: 'nodejs',
+};
