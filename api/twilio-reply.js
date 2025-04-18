@@ -81,7 +81,7 @@ export default async function handler(req, res) {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
-    const body = await req.json();
+    const body = req.body;
     // Support both Telnyx and Twilio incoming shapes
     const message = ((body.text || body.Body) || '').trim().toLowerCase();
     const from = body.from?.phone_number || body.From;
