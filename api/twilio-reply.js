@@ -90,8 +90,12 @@ export async function POST(req) {
     }
     if (isNegative(message)) {
       const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
-      await telnyx.messages.create({ from: to, to: from, text: reply });
-      appendHistory(from, 'Bot', reply);
+      try {
+        await telnyx.messages.create({ from: to, to: from, text: reply });
+        appendHistory(from, 'Bot', reply);
+      } catch (err) {
+        console.error('Telnyx send error (negative):', err);
+      }
       return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
     }
     if (isPositive(message)) {
@@ -103,16 +107,24 @@ export async function POST(req) {
       } else {
         reply = `Perfect! I'll inform Alexey to reach out to you personally within 24 hours. Thanks for your time!`;
       }
-      await telnyx.messages.create({ from: to, to: from, text: reply });
-      appendHistory(from, 'Bot', reply);
+      try {
+        await telnyx.messages.create({ from: to, to: from, text: reply });
+        appendHistory(from, 'Bot', reply);
+      } catch (err) {
+        console.error('Telnyx send error (positive):', err);
+      }
       return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
     }
 
     // GPT fallback
     const reply = await generateReplyWithGPT(message, from);
-    await telnyx.messages.create({ from: to, to: from, text: reply });
-    appendHistory(from, 'Bot', reply);
-
+    try {
+      await telnyx.messages.create({ from: to, to: from, text: reply });
+      appendHistory(from, 'Bot', reply);
+    } catch (err) {
+      console.error('Telnyx send error (fallback):', err);
+    }
+    
     return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
   } catch (error) {
     console.error('Handler error:', error);
