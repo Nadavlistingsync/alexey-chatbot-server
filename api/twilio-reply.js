@@ -1,6 +1,6 @@
 import Telnyx from 'telnyx';
 import OpenAI from 'openai';
-import { NextResponse } from 'next/server';
+// import { NextResponse } from 'next/server';
 
 const telnyx = Telnyx(process.env.TELNYX_API_KEY);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -79,7 +79,10 @@ export async function POST(req) {
     const to = body.to[0].phone_number;
 
     if (!from || !message) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Missing fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Append user message
@@ -87,7 +90,10 @@ export async function POST(req) {
 
     // Keyword-based early exits
     if (isListed(message)) {
-      return NextResponse.json({ status: 'Flagged as listed - no reply' }, { status: 200 });
+      return new Response(JSON.stringify({ status: 'Flagged as listed - no reply' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     if (isNegative(message)) {
       const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
@@ -97,7 +103,10 @@ export async function POST(req) {
       } catch (err) {
         console.error('Telnyx send error (negative):', err);
       }
-      return NextResponse.json({ status: 'Message sent', reply }, { status: 200 });
+      return new Response(JSON.stringify({ status: 'Message sent', reply }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     if (isPositive(message)) {
       // Two-step staging via history count
@@ -114,7 +123,10 @@ export async function POST(req) {
       } catch (err) {
         console.error('Telnyx send error (positive):', err);
       }
-      return NextResponse.json({ status: 'Message sent', reply }, { status: 200 });
+      return new Response(JSON.stringify({ status: 'Message sent', reply }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // GPT fallback
@@ -126,13 +138,16 @@ export async function POST(req) {
       console.error('Telnyx send error (fallback):', err);
     }
     
-    return NextResponse.json({ status: 'Message sent', reply }, { status: 200 });
+    return new Response(JSON.stringify({ status: 'Message sent', reply }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Handler error:', error);
     // Return actual error details for debugging
-    return NextResponse.json(
-      { error: error.message, stack: error.stack },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
