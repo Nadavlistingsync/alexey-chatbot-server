@@ -82,9 +82,9 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body;
-    const message = (body.text || '').trim().toLowerCase();
-    const from = body.from?.phone_number;
-    const to = body.to?.[0]?.phone_number;
+    const message = ((body.data?.payload?.text || '').trim() || '').toLowerCase();
+    const from = body.data?.payload?.from?.phone_number;
+    const to = body.data?.payload?.to?.[0]?.phone_number;
 
     if (!from || !to || !message) {
       return res.status(400).json({ error: 'Missing required fields', from, to, message });
