@@ -1,11 +1,15 @@
-import Telnyx from 'telnyx';
-import OpenAI from 'openai';
- 
+let Telnyx, OpenAI;
+const initModules = async () => {
+  if (!Telnyx) {
+    const telnyxImport = await import('telnyx');
+    Telnyx = telnyxImport.default;
+  }
+  if (!OpenAI) {
+    const openaiImport = await import('openai');
+    OpenAI = openaiImport.default;
+  }
+};
 
-const telnyx = Telnyx(process.env.TELNYX_API_KEY);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// In-memory conversation history store
 const conversationHistory = {};
 
 // Utility keyword checks
@@ -72,6 +76,10 @@ async function generateReplyWithGPT(message, from) {
 }
 
 export default async function handler(req, res) {
+  await initModules();
+  const telnyx = Telnyx(process.env.TELNYX_API_KEY);
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
   try {
     const body = req.body;
     // Support both Telnyx and Twilio incoming shapes
