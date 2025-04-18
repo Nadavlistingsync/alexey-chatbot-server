@@ -1,112 +1,121 @@
 import Telnyx from 'telnyx';
+import OpenAI from 'openai';
 
 const telnyx = Telnyx(process.env.TELNYX_API_KEY);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/**
- * Bot Albert SMS Assistant Logic
- * This represents the core decision-making logic for Bot Albert,
- * an SMS assistant for Florida Listings Real Estate.
- */
-
-const AGENT_INFO = {
-  name: "Alexey Kogan",
-  company: "Florida Listings Real Estate",
-  website: "https://floridalistingsre.com",
-  zillow: "https://zillow.com/profile/Alexey%20Kogan"
-};
-
+// In-memory conversation history store
 const conversationHistory = {};
 
-function isCurrentlyListed(message) {
-  const listedPatterns = [
-    "it's currently listed",
-    "it is currently listed",
-    "property is listed",
-    "already listed",
-    "we have it listed",
-    "i have it listed",
-    "on the market"
-  ];
-  return listedPatterns.some(pattern => message.includes(pattern));
+// Utility keyword checks
+const negativePatterns = [
+  "wrong number","sold","not selling","off market","not my property",
+  "lived there","take me off","remove me","not interested","stop","go away"
+];
+const positivePatterns = [
+  "yes","sure","ok","sounds good","interested","go ahead","please do"
+];
+const listedPatterns = [
+  "it's currently listed","it is currently listed","property is listed",
+  "already listed","we have it listed","i have it listed","on the market"
+];
+
+function isNegative(message) {
+  return negativePatterns.some(p => message.includes(p));
+}
+function isPositive(message) {
+  return positivePatterns.some(p => message.includes(p));
+}
+function isListed(message) {
+  return listedPatterns.some(p => message.includes(p));
 }
 
-function isNegativeResponse(message) {
-  const negativePatterns = [
-    "wrong number",
-    "sold",
-    "not selling",
-    "off market",
-    "not my property",
-    "lived there",
-    "take me off",
-    "remove me",
-    "not interested",
-    "stop",
-    "go away"
-  ];
-  return negativePatterns.some(pattern => message.includes(pattern));
+// Append to history and trim to last 10 entries
+function appendHistory(from, role, text) {
+  if (!conversationHistory[from]) conversationHistory[from] = [];
+  conversationHistory[from].push(`${role}: ${text}`);
+  if (conversationHistory[from].length > 10) {
+    conversationHistory[from] = conversationHistory[from].slice(-10);
+  }
 }
 
-function isPositiveResponse(message) {
-  const positivePatterns = [
-    "yes",
-    "sure",
-    "ok",
-    "sounds good",
-    "interested",
-    "go ahead",
-    "please do"
-  ];
-  return positivePatterns.some(pattern => message.includes(pattern));
+// Build a GPT prompt including history and instructions
+function buildPrompt(message, from) {
+  const history = conversationHistory[from] || [];
+  return `
+You are Bot Albert, an SMS assistant for real estate agent Alexey Kogan.
+Use a relaxed, friendly tone, share credibility, gauge interest in selling without hard-selling, and ask permission to follow up.
+If the property is already listed, do not reply.
+If user says no or negative, reply politely and stop.
+If user says yes or positive, follow a two-step flow: first ask if you can contact them, then hand off to Alexey.
+Conversation history:
+${history.join('\n')}
+
+New message:
+User: "${message}"
+
+Respond with a single SMS reply.`;
 }
 
-function generateReply(message) {
-  const lowerMessage = message.toLowerCase();
-
-  if (isNegativeResponse(lowerMessage)) {
-    return "No problem at all. You won’t hear from me again. Have a great day!";
-  }
-
-  if (isCurrentlyListed(lowerMessage)) {
-    return "Thanks for the update! I’ll make a note not to follow up again.";
-  }
-
-  if (isPositiveResponse(lowerMessage)) {
-    return `Awesome. Alexey Kogan has helped dozens of sellers near you. Check out his work here: ${AGENT_INFO.website}. He’ll take a look at recent sales and let you know what you could get. Is it okay if he follows up with you personally?`;
-  }
-
-  return `Hey there! Just reaching out to see if you’re still open to selling your property. If not, no worries — just reply “stop” and I won’t follow up.`;
+async function generateReplyWithGPT(message, from) {
+  const prompt = buildPrompt(message, from);
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      { role: "system", content: "You are the SMS assistant Bot Albert." },
+      { role: "user", content: prompt }
+    ],
+    temperature: 0.7
+  });
+  return completion.choices[0].message.content.trim();
 }
 
 export async function POST(req) {
   try {
     const body = await req.json();
-
     const from = body.from.phone_number;
-    const message = body.text;
+    const message = (body.text || "").trim().toLowerCase();
     const to = body.to[0].phone_number;
 
     if (!from || !message) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        status: 400,
-      });
+      return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400 });
     }
 
-    const reply = generateReply(message);
+    // Append user message
+    appendHistory(from, 'User', message);
 
-    await telnyx.messages.create({
-      from: to,
-      to: from,
-      text: reply,
-    });
+    // Keyword-based early exits
+    if (isListed(message)) {
+      return new Response(JSON.stringify({ status: 'Flagged as listed - no reply' }), { status: 200 });
+    }
+    if (isNegative(message)) {
+      const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
+      await telnyx.messages.create({ from: to, to: from, text: reply });
+      appendHistory(from, 'Bot', reply);
+      return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
+    }
+    if (isPositive(message)) {
+      // Two-step staging via history count
+      const stageCount = conversationHistory[from].filter(line => line.startsWith('Bot:')).length;
+      let reply;
+      if (stageCount === 0) {
+        reply = `Great to hear that! Alexey Kogan specializes in this area and has sold several properties nearby. May I share more details or have him contact you?`;
+      } else {
+        reply = `Perfect! I'll inform Alexey to reach out to you personally within 24 hours. Thanks for your time!`;
+      }
+      await telnyx.messages.create({ from: to, to: from, text: reply });
+      appendHistory(from, 'Bot', reply);
+      return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
+    }
 
-    return new Response(JSON.stringify({ status: 'Message sent', reply }), {
-      status: 200,
-    });
+    // GPT fallback
+    const reply = await generateReplyWithGPT(message, from);
+    await telnyx.messages.create({ from: to, to: from, text: reply });
+    appendHistory(from, 'Bot', reply);
+
+    return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
   } catch (error) {
     console.error('Handler error:', error);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-    });
+    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 }
