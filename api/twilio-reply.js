@@ -1,4 +1,4 @@
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'edge' };
 import Telnyx from 'telnyx';
 import OpenAI from 'openai';
  
@@ -72,16 +72,16 @@ async function generateReplyWithGPT(message, from) {
   return completion.choices[0].message.content.trim();
 }
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   try {
-  const body = req.body;
+    const body = await req.json();
     // Support both Telnyx and Twilio incoming shapes
     const message = ((body.text || body.Body) || '').trim().toLowerCase();
     const from = body.from?.phone_number || body.From;
     const to = Array.isArray(body.to) ? body.to[0].phone_number : body.To;
 
     if (!from || !message) {
-      return res.status(400).json({ error: 'Missing fields' });
+      return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400 });
     }
 
     // Append user message
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
 
     // Keyword-based early exits
     if (isListed(message)) {
-      return res.status(200).json({ status: 'Flagged as listed - no reply' });
+      return new Response(JSON.stringify({ status: 'Flagged as listed - no reply' }), { status: 200 });
     }
     if (isNegative(message)) {
       const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error('Telnyx send error (negative):', err);
       }
-      return res.status(200).json({ status: 'Message sent', reply });
+      return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
     }
     if (isPositive(message)) {
       // Two-step staging via history count
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error('Telnyx send error (positive):', err);
       }
-      return res.status(200).json({ status: 'Message sent', reply });
+      return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
     }
 
     // GPT fallback
@@ -128,10 +128,10 @@ export default async function handler(req, res) {
       console.error('Telnyx send error (fallback):', err);
     }
     
-    return res.status(200).json({ status: 'Message sent', reply });
+    return new Response(JSON.stringify({ status: 'Message sent', reply }), { status: 200 });
   } catch (error) {
     console.error('Handler error:', error);
     // Return actual error details for debugging
-    return res.status(500).json({ error: error.message, stack: error.stack });
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), { status: 500 });
   }
 }
