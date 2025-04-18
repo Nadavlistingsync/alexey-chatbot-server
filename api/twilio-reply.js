@@ -82,13 +82,12 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body;
-    // Support both Telnyx and Twilio incoming shapes
-    const message = ((body.text || body.Body) || '').trim().toLowerCase();
-    const from = body.from?.phone_number || body.From;
-    const to = Array.isArray(body.to) ? body.to[0].phone_number : body.To;
+    const message = (body.text || '').trim().toLowerCase();
+    const from = body.from?.phone_number;
+    const to = body.to?.[0]?.phone_number;
 
-    if (!from || !message) {
-      return res.status(400).json({ error: 'Missing fields' });
+    if (!from || !to || !message) {
+      return res.status(400).json({ error: 'Missing required fields', from, to, message });
     }
 
     // Append user message
