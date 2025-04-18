@@ -129,6 +129,10 @@ export async function POST(req) {
     return NextResponse.json({ status: 'Message sent', reply }, { status: 200 });
   } catch (error) {
     console.error('Handler error:', error);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    // Return actual error details for debugging
+    return NextResponse.json(
+      { error: error.message, stack: error.stack },
+      { status: 500 }
+    );
   }
 }
