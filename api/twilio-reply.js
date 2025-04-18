@@ -134,8 +134,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
-
-export const config = {
-  runtime: 'nodejs',
-  maxDuration: 10, // optional: allows more time for async work
-};
