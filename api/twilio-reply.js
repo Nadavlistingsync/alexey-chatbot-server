@@ -90,6 +90,18 @@ export default async function handler(req, res) {
   await initModules();
   const telnyx = Telnyx(process.env.TELNYX_API_KEY);
   
+  const evt = req.body.data?.event_type;
+  if (evt !== 'message.received') {
+    console.log(`⏩ skipping event_type=${evt}`);
+    return res.status(200).end();
+  }
+
+  const senderNumber = process.env.TELNYX_NUMBER;
+  if (!senderNumber) {
+    console.error('Missing TELNYX_NUMBER env var');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
+  
   try {
     const body = req.body;
     const message = ((body.data?.payload?.text || '').trim() || '').toLowerCase();
@@ -103,14 +115,18 @@ export default async function handler(req, res) {
     // Append user message
     appendHistory(from, 'User', message);
 
-    // Use a fixed Telnyx sender number from environment
-    const senderNumber = process.env.TELNYX_NUMBER;
-
     // GPT handles all logic
     const reply = await generateReplyWithGPT(message, from);
     try {
+      // log exact payload for Telnyx
+      console.log('📤 Telnyx send payload:', {
+        from: senderNumber,
+        to: from,
+        text: reply,
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+      });
       await telnyx.messages.create({
-        from: senderNumber || to,
+        from: senderNumber,
         to: from,
         text: reply,
         messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
