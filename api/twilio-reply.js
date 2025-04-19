@@ -42,7 +42,7 @@ Respond with a single SMS reply.`;
 async function generateReplyWithGPT(message, from) {
   try {
     const prompt = buildPrompt(message, from);
-    const OpenAIClient = OpenAI.default;
+    const { OpenAI: OpenAIClient } = OpenAI;
     const openai = new OpenAIClient({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create?.({
       model: "gpt-3.5-turbo",
