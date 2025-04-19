@@ -6,37 +6,11 @@ const initModules = async () => {
   }
   if (!OpenAI) {
     const openaiImport = await import('openai');
-    OpenAI = openaiImport.OpenAI;
+    OpenAI = openaiImport.default || openaiImport.OpenAI;
   }
 };
 
 const conversationHistory = {};
-
-// Utility keyword checks
-const negativePatterns = [
-  "wrong number","sold","not selling","off market","not my property",
-  "lived there","take me off","remove me","not interested","stop","go away"
-];
-const positivePatterns = [
-  "yes","sure","ok","sounds good","interested","go ahead","please do"
-];
-function isAmbiguous(message) {
-  return ["not sure", "maybe", "depends", "what do you want", "thinking about it"].some(p => message.includes(p));
-}
-const listedPatterns = [
-  "it's currently listed","it is currently listed","property is listed",
-  "already listed","we have it listed","i have it listed","on the market"
-];
-
-function isNegative(message) {
-  return negativePatterns.some(p => message.includes(p));
-}
-function isPositive(message) {
-  return positivePatterns.some(p => message.includes(p));
-}
-function isListed(message) {
-  return listedPatterns.some(p => message.includes(p));
-}
 
 // Append to history and trim to last 10 entries
 function appendHistory(from, role, text) {
