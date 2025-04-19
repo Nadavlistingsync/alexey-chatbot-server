@@ -64,6 +64,7 @@ Respond with a single SMS reply.`;
 
 async function generateReplyWithGPT(message, from) {
   const prompt = buildPrompt(message, from);
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages: [
@@ -152,7 +153,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ status: 'Message sent', reply });
   } catch (error) {
     console.error('Handler error:', error);
-    // Return actual error details for debugging
     return res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
