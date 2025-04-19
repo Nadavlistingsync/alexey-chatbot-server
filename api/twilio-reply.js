@@ -95,11 +95,17 @@ export default async function handler(req, res) {
     // GPT handles all logic
     const reply = await generateReplyWithGPT(message, from);
     try {
-      await telnyx.messages.create({
-        from: to,
+      console.log('Sending SMS via Telnyx with params:', {
+        from: process.env.TELNYX_PHONE_NUMBER,
         to: from,
         text: reply,
-        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+        messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID
+      });
+      await telnyx.messages.create({
+        from: process.env.TELNYX_PHONE_NUMBER,
+        to: from,
+        text: reply,
+        messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID
       });
       appendHistory(from, 'Bot', reply);
     } catch (err) {
