@@ -6,7 +6,7 @@ const initModules = async () => {
   }
   if (!OpenAI) {
     const openaiImport = await import('openai');
-    OpenAI = openaiImport.default || openaiImport.OpenAI;
+    OpenAI = openaiImport.default;
   }
 };
 
