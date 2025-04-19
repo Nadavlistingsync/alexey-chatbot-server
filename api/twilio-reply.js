@@ -42,8 +42,21 @@ Respond with a single SMS reply.`;
 async function generateReplyWithGPT(message, from) {
   try {
     const prompt = buildPrompt(message, from);
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const completion = await openai.chat.completions.create({
+
+    let openai;
+    try {
+      const openaiImport = await import("openai");
+      const { OpenAIApi, Configuration } = openaiImport;
+      const configuration = new Configuration({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+      openai = new OpenAIApi(configuration);
+      console.log("OpenAI initialized successfully");
+    } catch (err) {
+      console.error("OpenAI initialization error:", err);
+    }
+
+    const completion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "You are the SMS assistant Bot Albert." },
@@ -51,7 +64,8 @@ async function generateReplyWithGPT(message, from) {
       ],
       temperature: 0.7
     });
-    return completion.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn't generate a response.";
+
+    return completion.data.choices[0].message.content.trim();
   } catch (err) {
     console.error('GPT fallback error:', err);
     return "Sorry, I had trouble generating a response. Can you please rephrase that?";
