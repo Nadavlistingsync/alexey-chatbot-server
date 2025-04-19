@@ -35,11 +35,20 @@ User: "${message}"
 Respond with a single SMS reply.`;
 }
 
+// --- OpenAI SDK v4.x initialisation ---
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// If the env var is present you can omit the arg object completely,
+// but passing it explicitly is fine.
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Guard – fail fast (and noisily) in case the SDK hasn’t been imported correctly
+if (!openai.chat?.completions?.create) {
+  throw new Error(
+    'OpenAI client initialisation failed – `openai.chat.completions.create` is undefined. ' +
+    'Check the SDK version and import statement.'
+  );
+}
 
 async function generateReplyWithGPT(message, from) {
   try {
