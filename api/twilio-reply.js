@@ -6,7 +6,7 @@ const initModules = async () => {
   }
   if (!OpenAI) {
     const openaiImport = await import('openai');
-    OpenAI = openaiImport.OpenAI;
+    OpenAI = openaiImport.default;
   }
 };
 
@@ -51,7 +51,7 @@ async function generateReplyWithGPT(message, from) {
       ],
       temperature: 0.7
     });
-    return completion.choices[0].message.content.trim();
+    return completion.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn't generate a response.";
   } catch (err) {
     console.error('GPT fallback error:', err);
     return "Sorry, I had trouble generating a response. Can you please rephrase that?";
