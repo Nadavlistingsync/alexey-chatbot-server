@@ -63,16 +63,21 @@ Respond with a single SMS reply.`;
 }
 
 async function generateReplyWithGPT(message, from) {
-  const prompt = buildPrompt(message, from);
-  const completion = await OpenAI.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      { role: "system", content: "You are the SMS assistant Bot Albert." },
-      { role: "user", content: prompt }
-    ],
-    temperature: 0.7
-  });
-  return completion.choices[0].message.content.trim();
+  try {
+    const prompt = buildPrompt(message, from);
+    const completion = await OpenAI.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "You are the SMS assistant Bot Albert." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (err) {
+    console.error('GPT fallback error:', err);
+    return "Sorry, I had trouble generating a response. Can you please rephrase that?";
+  }
 }
 
 export default async function handler(req, res) {
