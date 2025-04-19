@@ -80,8 +80,10 @@ export default async function handler(req, res) {
   // Only process inbound texts
   if (req.method !== 'POST') return res.status(405).end();
   const evt = req.body.data?.event_type;
+  console.log('Telnyx event_type:', evt);
   if (evt !== 'message.received') {
     // ignore non-inbound events
+    console.log('⏩ skipping event_type:', evt);
     return res.status(200).end();
   }
   console.log('Incoming SMS payload:', JSON.stringify(req.body));
