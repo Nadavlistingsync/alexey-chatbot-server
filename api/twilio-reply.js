@@ -1,39 +1,12 @@
-let Telnyx, OpenAI;
+let Telnyx;
 const initModules = async () => {
   if (!Telnyx) {
     const telnyxImport = await import('telnyx');
     Telnyx = telnyxImport.default;
   }
-  if (!OpenAI) {
-    const openaiImport = await import('openai');
-    OpenAI = openaiImport.default;
-  }
 };
 
 const conversationHistory = {};
-
-// Utility keyword checks
-const negativePatterns = [
-  "wrong number","sold","not selling","off market","not my property",
-  "lived there","take me off","remove me","not interested","stop","go away"
-];
-const positivePatterns = [
-  "yes","sure","ok","sounds good","interested","go ahead","please do"
-];
-const listedPatterns = [
-  "it's currently listed","it is currently listed","property is listed",
-  "already listed","we have it listed","i have it listed","on the market"
-];
-
-function isNegative(message) {
-  return negativePatterns.some(p => message.includes(p));
-}
-function isPositive(message) {
-  return positivePatterns.some(p => message.includes(p));
-}
-function isListed(message) {
-  return listedPatterns.some(p => message.includes(p));
-}
 
 // Append to history and trim to last 10 entries
 function appendHistory(from, role, text) {
@@ -62,7 +35,27 @@ User: "${message}"
 Respond with a single SMS reply.`;
 }
 
+// --- Lazy‑load OpenAI SDK (works both locally and on Vercel) ---
+let OpenAI;
+let openaiClient;
+
+const initOpenAI = async () => {
+  if (!OpenAI) {
+    const { default: OpenAIConstructor } = await import('openai');
+    OpenAI = OpenAIConstructor;
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // Guard – fail fast if the SDK isn’t what we expect
+    if (!openaiClient.chat?.completions?.create) {
+      throw new Error(
+        'OpenAI client initialisation failed – `chat.completions.create` is unavailable',
+      );
+    }
+  }
+};
+
 async function generateReplyWithGPT(message, from) {
+<<<<<<< HEAD
   const prompt = buildPrompt(message, from);
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
@@ -74,13 +67,32 @@ async function generateReplyWithGPT(message, from) {
     temperature: 0.7
   });
   return completion.choices[0].message.content.trim();
+=======
+  await initOpenAI();
+  try {
+    const prompt = buildPrompt(message, from);
+
+    const completion = await openaiClient.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "You are the SMS assistant Bot Albert." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7
+    });
+
+    return completion.choices[0].message.content.trim();
+  } catch (err) {
+    console.error('GPT fallback error:', err);
+    return "Sorry, I had trouble generating a response. Can you please rephrase that?";
+  }
+>>>>>>> restore-working-bot
 }
 
 export default async function handler(req, res) {
   await initModules();
   const telnyx = Telnyx(process.env.TELNYX_API_KEY);
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+  
   try {
     const body = req.body;
     const message = ((body.data?.payload?.text || '').trim() || '').toLowerCase();
@@ -94,49 +106,7 @@ export default async function handler(req, res) {
     // Append user message
     appendHistory(from, 'User', message);
 
-    // Keyword-based early exits
-    if (isListed(message)) {
-      return res.status(200).json({ status: 'Flagged as listed - no reply' });
-    }
-    if (isNegative(message)) {
-      const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
-      try {
-        await telnyx.messages.create({
-          from: to,
-          to: from,
-          text: reply,
-          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
-        });
-        appendHistory(from, 'Bot', reply);
-      } catch (err) {
-        console.error('Telnyx send error (negative):', err);
-      }
-      return res.status(200).json({ status: 'Message sent', reply });
-    }
-    if (isPositive(message)) {
-      // Two-step staging via history count
-      const stageCount = conversationHistory[from].filter(line => line.startsWith('Bot:')).length;
-      let reply;
-      if (stageCount === 0) {
-        reply = `Great to hear that! Alexey Kogan specializes in this area and has sold several properties nearby. May I share more details or have him contact you?`;
-      } else {
-        reply = `Perfect! I'll inform Alexey to reach out to you personally within 24 hours. Thanks for your time!`;
-      }
-      try {
-        await telnyx.messages.create({
-          from: to,
-          to: from,
-          text: reply,
-          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
-        });
-        appendHistory(from, 'Bot', reply);
-      } catch (err) {
-        console.error('Telnyx send error (positive):', err);
-      }
-      return res.status(200).json({ status: 'Message sent', reply });
-    }
-
-    // GPT fallback
+    // GPT handles all logic
     const reply = await generateReplyWithGPT(message, from);
     try {
       await telnyx.messages.create({
@@ -147,7 +117,7 @@ export default async function handler(req, res) {
       });
       appendHistory(from, 'Bot', reply);
     } catch (err) {
-      console.error('Telnyx send error (fallback):', err);
+      console.error('Telnyx send error (GPT):', err);
     }
     
     return res.status(200).json({ status: 'Message sent', reply });
