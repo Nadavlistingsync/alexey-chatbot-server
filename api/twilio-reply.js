@@ -76,6 +76,7 @@ async function generateReplyWithGPT(message, from) {
 }
 
 export default async function handler(req, res) {
+  console.log('Received webhook payload:', JSON.stringify(req.body));
   await initModules();
   const telnyx = Telnyx(process.env.TELNYX_API_KEY);
   
@@ -92,20 +93,17 @@ export default async function handler(req, res) {
     // Append user message
     appendHistory(from, 'User', message);
 
+    // Use a fixed Telnyx sender number from environment
+    const senderNumber = process.env.TELNYX_NUMBER;
+
     // GPT handles all logic
     const reply = await generateReplyWithGPT(message, from);
     try {
-      console.log('Sending SMS via Telnyx with params:', {
-        from: process.env.TELNYX_PHONE_NUMBER,
-        to: from,
-        text: reply,
-        messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID
-      });
       await telnyx.messages.create({
-        from: process.env.TELNYX_PHONE_NUMBER,
+        from: senderNumber || to,
         to: from,
         text: reply,
-        messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
       });
       appendHistory(from, 'Bot', reply);
     } catch (err) {
