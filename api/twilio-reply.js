@@ -64,7 +64,7 @@ Respond with a single SMS reply.`;
 
 async function generateReplyWithGPT(message, from) {
   const prompt = buildPrompt(message, from);
-  const completion = await openai.chat.completions.create({
+  const completion = await OpenAI.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages: [
       { role: "system", content: "You are the SMS assistant Bot Albert." },
@@ -78,7 +78,7 @@ async function generateReplyWithGPT(message, from) {
 export default async function handler(req, res) {
   await initModules();
   const telnyx = Telnyx(process.env.TELNYX_API_KEY);
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
     const body = req.body;
