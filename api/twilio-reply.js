@@ -20,6 +20,9 @@ const negativePatterns = [
 const positivePatterns = [
   "yes","sure","ok","sounds good","interested","go ahead","please do"
 ];
+function isAmbiguous(message) {
+  return ["not sure", "maybe", "depends", "what do you want", "thinking about it"].some(p => message.includes(p));
+}
 const listedPatterns = [
   "it's currently listed","it is currently listed","property is listed",
   "already listed","we have it listed","i have it listed","on the market"
@@ -98,49 +101,7 @@ export default async function handler(req, res) {
     // Append user message
     appendHistory(from, 'User', message);
 
-    // Keyword-based early exits
-    if (isListed(message)) {
-      return res.status(200).json({ status: 'Flagged as listed - no reply' });
-    }
-    if (isNegative(message)) {
-      const reply = "I understand. Thanks for letting me know. I'll update our records. Have a great day!";
-      try {
-        await telnyx.messages.create({
-          from: to,
-          to: from,
-          text: reply,
-          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
-        });
-        appendHistory(from, 'Bot', reply);
-      } catch (err) {
-        console.error('Telnyx send error (negative):', err);
-      }
-      return res.status(200).json({ status: 'Message sent', reply });
-    }
-    if (isPositive(message)) {
-      // Two-step staging via history count
-      const stageCount = conversationHistory[from].filter(line => line.startsWith('Bot:')).length;
-      let reply;
-      if (stageCount === 0) {
-        reply = `Great to hear that! Alexey Kogan specializes in this area and has sold several properties nearby. May I share more details or have him contact you?`;
-      } else {
-        reply = `Perfect! I'll inform Alexey to reach out to you personally within 24 hours. Thanks for your time!`;
-      }
-      try {
-        await telnyx.messages.create({
-          from: to,
-          to: from,
-          text: reply,
-          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
-        });
-        appendHistory(from, 'Bot', reply);
-      } catch (err) {
-        console.error('Telnyx send error (positive):', err);
-      }
-      return res.status(200).json({ status: 'Message sent', reply });
-    }
-
-    // GPT fallback
+    // GPT handles all logic
     const reply = await generateReplyWithGPT(message, from);
     try {
       await telnyx.messages.create({
@@ -151,7 +112,7 @@ export default async function handler(req, res) {
       });
       appendHistory(from, 'Bot', reply);
     } catch (err) {
-      console.error('Telnyx send error (fallback):', err);
+      console.error('Telnyx send error (GPT):', err);
     }
     
     return res.status(200).json({ status: 'Message sent', reply });
