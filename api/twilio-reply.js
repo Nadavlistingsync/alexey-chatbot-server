@@ -35,26 +35,31 @@ User: "${message}"
 Respond with a single SMS reply.`;
 }
 
-// --- OpenAI SDK v4.x initialisation ---
-import OpenAI from 'openai';
+// --- Lazy‑load OpenAI SDK (works both locally and on Vercel) ---
+let OpenAI;
+let openaiClient;
 
-// If the env var is present you can omit the arg object completely,
-// but passing it explicitly is fine.
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const initOpenAI = async () => {
+  if (!OpenAI) {
+    const { default: OpenAIConstructor } = await import('openai');
+    OpenAI = OpenAIConstructor;
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Guard – fail fast (and noisily) in case the SDK hasn’t been imported correctly
-if (!openai.chat?.completions?.create) {
-  throw new Error(
-    'OpenAI client initialisation failed – `openai.chat.completions.create` is undefined. ' +
-    'Check the SDK version and import statement.'
-  );
-}
+    // Guard – fail fast if the SDK isn’t what we expect
+    if (!openaiClient.chat?.completions?.create) {
+      throw new Error(
+        'OpenAI client initialisation failed – `chat.completions.create` is unavailable',
+      );
+    }
+  }
+};
 
 async function generateReplyWithGPT(message, from) {
+  await initOpenAI();
   try {
     const prompt = buildPrompt(message, from);
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "You are the SMS assistant Bot Albert." },
