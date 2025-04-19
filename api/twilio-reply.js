@@ -6,9 +6,7 @@ const initModules = async () => {
   }
   if (!OpenAI) {
     const openaiImport = await import('openai');
-    OpenAI = new openaiImport.OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    OpenAI = openaiImport.OpenAI;
   }
 };
 
