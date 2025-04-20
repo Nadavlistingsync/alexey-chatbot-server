@@ -107,14 +107,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields', from, to, message });
     }
 
+    console.log('📩 Message received from:', from);
+    console.log('📨 Message content:', message);
+
     // Append user message
     appendHistory(from, 'User', message);
 
     // Use a fixed Telnyx sender number from environment
     const senderNumber = process.env.TELNYX_NUMBER;
 
+    console.log('🧠 Generating GPT reply...');
     // GPT handles all logic
     const reply = await generateReplyWithGPT(message, from);
+    console.log('✅ GPT reply:', reply);
+    
     try {
       await telnyx.messages.create({
         from: senderNumber || to,
