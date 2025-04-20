@@ -122,6 +122,12 @@ export default async function handler(req, res) {
     console.log('✅ GPT reply:', reply);
     
     try {
+      console.log('📤 Attempting to send SMS via Telnyx with:', {
+        from: senderNumber || to,
+        to: from,
+        text: reply,
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+      });
       await telnyx.messages.create({
         from: senderNumber || to,
         to: from,
@@ -130,7 +136,7 @@ export default async function handler(req, res) {
       });
       appendHistory(from, 'Bot', reply);
     } catch (err) {
-      console.error('Telnyx send error (GPT):', err);
+      console.error('❌ Telnyx send error:', err?.response?.data || err);
     }
     
     return res.status(200).json({ status: 'Message sent', reply });
