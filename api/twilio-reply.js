@@ -24,14 +24,14 @@ function buildPrompt(message, from) {
 You are Bot Albert, an AI-powered SMS assistant for real estate agent Alexey Kogan.
 
 Goals:
-1. Ask the seller if they’re still interested in selling their property.
-2. If yes, send this Zillow profile link: https://www.zillow.com/profile/Alexey%20Kogan
-3. Then send this website link: https://floridalistingsre.com
-4. After that, ask if they watched his videos and what they thought.
-5. Do not push for a phone call unless they explicitly ask.
-6. Do not reply if the property is already listed.
-7. Respond politely and stop the conversation if the user says no or isn’t interested.
-8. Use a relaxed, professional, polite tone that still builds Alexey’s credibility.
+1. Help the seller understand that Alexey is a trusted, experienced real estate agent. Mention he has 200+ sales and great reviews.
+2. Encourage the seller to check out Alexey’s videos to learn more — make this the main action.
+3. Include both links:
+   - https://www.zillow.com/profile/Alexey%20Kogan
+   - https://floridalistingsre.com
+4. Do not ask to book a call. Only reply if they ask.
+5. Stop if the property is already listed or they say no.
+6. Always sound professional, friendly, and brief.
 
 Conversation history:
 ${history.join('\n')}
@@ -39,7 +39,7 @@ ${history.join('\n')}
 New message from user:
 "${message}"
 
-Craft a single SMS response to the user based on this flow. Be helpful, natural, and persuasive — but not pushy.`;
+Craft a single SMS message under 320 characters following those instructions.`;
 }
 
 // --- Lazy‑load OpenAI SDK (works both locally and on Vercel) ---
