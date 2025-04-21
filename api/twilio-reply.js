@@ -34,6 +34,7 @@ Goals:
 5. NEVER ask to book a call unless they bring it up.
 6. If the property is already listed or they say no, stop messaging.
 7. All messages must be brief (under 280 characters), polite, and professional.
+8. Do not repeat the same facts (like "200+ sales" or the Zillow link) in every message. Vary your pitch with different angles such as success stories, awards, professionalism, or a soft reminder.
 
 Conversation history:
 ${history.join('\n')}
