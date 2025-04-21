@@ -84,6 +84,8 @@ async function generateReplyWithGPT(message, from) {
   }
 }
 
+export { generateReplyWithGPT, conversationHistory, appendHistory };
+
 export default async function handler(req, res) {
   // Only process inbound texts
   if (req.method !== 'POST') return res.status(405).end();
