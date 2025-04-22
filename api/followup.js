@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { Telnyx } from 'telnyx';
 
+// @vercel/cron: daily, 12:00
+
 const telnyx = Telnyx(process.env.TELNYX_API_KEY);
 const contactsPath = path.resolve('./contacts.json');
 
@@ -34,12 +36,13 @@ export default async function handler(req, res) {
           text: msg,
           messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID,
         });
+        console.log(`✅ Sent follow-up to ${contact.phone}`);
 
         contact.followUpCount = (contact.followUpCount || 0) + 1;
         contact.lastFollowUpDate = now.toISOString();
-        console.log(`✅ Sent follow-up to ${contact.phone}`);
+        console.log(`✅ Updated follow-up data for ${contact.phone}`);
       } catch (err) {
-        console.error(`❌ Failed to send to ${contact.phone}:`, err?.response?.data || err);
+        console.error(`❌ Failed to send to ${contact.phone}:`, err);
       }
     }
   }
