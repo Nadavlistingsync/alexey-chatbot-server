@@ -114,13 +114,6 @@ export default async function handler(req, res) {
 
     console.log('📩 Message received from:', from);
     console.log('📨 Message content:', message);
-    // Check if we already responded to this message
-    const normalized = (str) => str.trim().toLowerCase();
-    const alreadyReplied = history.some(entry => entry.startsWith("User:") && normalized(entry.slice(6)) === normalized(message));
-    if (alreadyReplied) {
-      console.log("⏩ Duplicate message detected. Skipping new GPT reply.");
-      return res.status(200).json({ status: 'Duplicate ignored' });
-    }
 
     // Append user message
     appendHistory(from, 'User', message);
