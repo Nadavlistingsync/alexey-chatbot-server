@@ -1,10 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { Telnyx } from 'telnyx';
 
 // @vercel/cron: daily, 12:00
 
-const telnyx = Telnyx(process.env.TELNYX_API_KEY);
 const contactsPath = path.resolve('./contacts.json');
 
 const followUps = [
@@ -17,6 +15,15 @@ const followUps = [
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
+
+  let telnyx;
+  try {
+    const { default: Telnyx } = await import('telnyx');
+    telnyx = Telnyx(process.env.TELNYX_API_KEY);
+  } catch (err) {
+    console.error("❌ Failed to import Telnyx:", err);
+    return res.status(500).json({ error: 'Telnyx init failed' });
+  }
 
   const contacts = JSON.parse(fs.readFileSync(contactsPath, 'utf-8'));
   const now = new Date();
