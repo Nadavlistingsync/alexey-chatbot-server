@@ -25,7 +25,13 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Telnyx init failed' });
   }
 
-  const contacts = JSON.parse(fs.readFileSync(contactsPath, 'utf-8'));
+  let contacts = [];
+  try {
+    contacts = JSON.parse(fs.readFileSync(contactsPath, 'utf-8'));
+  } catch (err) {
+    console.error("❌ Failed to read contacts.json:", err);
+    return res.status(500).json({ error: 'Missing or invalid contacts.json' });
+  }
   const now = new Date();
 
   for (let contact of contacts) {
