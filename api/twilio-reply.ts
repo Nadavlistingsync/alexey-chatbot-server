@@ -41,8 +41,8 @@ let openaiClient: OpenAI | null = null;
 let telnyxClient: any = null;
 const conversationHistory: Record<string, MessageHistory> = {};
 
-// Initialize Telnyx client
-const initTelnyx = async () => {
+// Initialize Telnyx client with caching
+async function getTelnyxClient() {
   if (telnyxClient) {
     console.log('✅ Using cached Telnyx client');
     return telnyxClient;
@@ -55,11 +55,10 @@ const initTelnyx = async () => {
     return telnyxClient;
   } catch (error) {
     console.error('❌ Failed to initialize Telnyx client:', error);
-    // Clear the cached client on error
     telnyxClient = null;
     throw error;
   }
-};
+}
 
 // Initialize OpenAI client
 const initOpenAI = async (): Promise<OpenAI> => {
@@ -138,7 +137,7 @@ async function generateReplyWithGPT(message: string, from: string): Promise<stri
 
 // Send message via Telnyx
 async function sendMessage(message: TelnyxMessage): Promise<void> {
-  const telnyx = await initTelnyx();
+  const telnyx = await getTelnyxClient();
   try {
     console.log('📤 Sending message via Telnyx:', {
       to: message.to,
@@ -211,14 +210,9 @@ export default async function handler(req: any, res: any) {
         from: senderNumber || to,
         to: from,
         text: reply,
-        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID || ''
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID || '',
+        media_urls: [CONFIG.ALEXEY_IMAGE_URL] // Always include image for MMS
       };
-
-      // Check if we should send an image (only with links)
-      if (containsLink(reply)) {
-        messageData.media_urls = [CONFIG.ALEXEY_IMAGE_URL];
-        console.log('📸 Sending MMS with image:', CONFIG.ALEXEY_IMAGE_URL);
-      }
 
       await sendMessage(messageData);
       appendHistory(from, 'Bot', reply);
@@ -226,7 +220,7 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ 
         status: 'Message sent', 
         reply,
-        hasImage: containsLink(reply)
+        hasImage: true
       });
     } catch (err) {
       console.error('❌ Failed to send message:', {
