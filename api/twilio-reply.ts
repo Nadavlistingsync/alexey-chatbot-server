@@ -44,7 +44,7 @@ const conversationHistory: Record<string, MessageHistory> = {};
 const initTelnyx = async () => {
   try {
     const { default: Telnyx } = await import('telnyx');
-    const client = Telnyx(process.env.TELNYX_API_KEY);
+    const client = new Telnyx(process.env.TELNYX_API_KEY);
     console.log('✅ Telnyx client initialized successfully');
     return client;
   } catch (error) {
