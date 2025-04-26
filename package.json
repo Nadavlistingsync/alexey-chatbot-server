@@ -1,9 +1,11 @@
 {
   "name": "alexey-chatbot-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vercel dev",
+    "start": "vercel start",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -18,7 +20,12 @@
   "homepage": "https://github.com/Nadavlistingsync/alexey-chatbot-server#readme",
   "description": "",
   "dependencies": {
-    "openai": "^4.95.1",
+    "openai": "^4.0.0",
     "telnyx": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vercel/node": "^3.0.0",
+    "typescript": "^5.0.0"
   }
 }
