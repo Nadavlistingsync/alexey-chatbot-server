@@ -38,17 +38,25 @@ interface TelnyxWebhookPayload {
 
 // State
 let openaiClient: OpenAI | null = null;
+let telnyxClient: any = null;
 const conversationHistory: Record<string, MessageHistory> = {};
 
 // Initialize Telnyx client
 const initTelnyx = async () => {
+  if (telnyxClient) {
+    console.log('✅ Using cached Telnyx client');
+    return telnyxClient;
+  }
+
   try {
     const { default: Telnyx } = await import('telnyx');
-    const client = new Telnyx(process.env.TELNYX_API_KEY);
+    telnyxClient = new Telnyx(process.env.TELNYX_API_KEY);
     console.log('✅ Telnyx client initialized successfully');
-    return client;
+    return telnyxClient;
   } catch (error) {
     console.error('❌ Failed to initialize Telnyx client:', error);
+    // Clear the cached client on error
+    telnyxClient = null;
     throw error;
   }
 };
