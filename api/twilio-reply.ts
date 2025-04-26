@@ -3,7 +3,7 @@ import type { OpenAI } from 'openai';
 
 // Configuration
 const CONFIG = {
-  ALEXEY_IMAGE_URL: process.env.ALEXEY_IMAGE_URL || 'https://example.com/alexey.jpg', // You'll update this later
+  ALEXEY_IMAGE_URL: 'https://i.ibb.co/G3nk5LcK/Screenshot-2025-04-26-at-6-35-21-PM.png',
   MAX_HISTORY_LENGTH: 10,
   MAX_MESSAGE_LENGTH: 280,
 } as const;
@@ -114,7 +114,17 @@ async function generateReplyWithGPT(message: string, from: string): Promise<stri
 // Send message via Telnyx
 async function sendMessage(message: TelnyxMessage): Promise<void> {
   const telnyx = await initTelnyx();
-  await telnyx.messages.create(message);
+  try {
+    await telnyx.messages.create(message);
+    console.log('✅ Message sent successfully:', {
+      to: message.to,
+      hasImage: !!message.media_urls,
+      textLength: message.text.length
+    });
+  } catch (err) {
+    console.error('❌ Telnyx send error:', err?.response?.data || err);
+    throw err;
+  }
 }
 
 export { generateReplyWithGPT, conversationHistory, appendHistory };
@@ -164,21 +174,30 @@ export default async function handler(req: any, res: any) {
         messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID || ''
       };
 
-      // Check if we should send an image
-      if (containsLink(reply) && !conversationHistory[from]?.hasSentImage) {
+      // Check if we should send an image (only with links)
+      if (containsLink(reply)) {
         messageData.media_urls = [CONFIG.ALEXEY_IMAGE_URL];
-        conversationHistory[from].hasSentImage = true;
-        console.log('📸 Sending MMS with image');
+        console.log('📸 Sending MMS with image:', CONFIG.ALEXEY_IMAGE_URL);
       }
 
-      console.log('📤 Attempting to send message via Telnyx:', messageData);
+      console.log('📤 Attempting to send message via Telnyx:', {
+        to: messageData.to,
+        hasImage: !!messageData.media_urls,
+        textLength: messageData.text.length
+      });
+      
       await sendMessage(messageData);
       appendHistory(from, 'Bot', reply);
     } catch (err) {
       console.error('❌ Telnyx send error:', err?.response?.data || err);
+      return res.status(500).json({ error: 'Failed to send message', details: err?.response?.data || err });
     }
     
-    return res.status(200).json({ status: 'Message sent', reply });
+    return res.status(200).json({ 
+      status: 'Message sent', 
+      reply,
+      hasImage: containsLink(reply)
+    });
   } catch (error) {
     console.error('Handler error:', error);
     return res.status(500).json({ error: error.message, stack: error.stack });
