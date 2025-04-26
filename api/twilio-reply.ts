@@ -1,4 +1,3 @@
-import type { Telnyx } from 'telnyx';
 import type { OpenAI } from 'openai';
 
 // Configuration
@@ -23,17 +22,13 @@ interface TelnyxMessage {
 }
 
 // State
-let telnyxClient: Telnyx | null = null;
 let openaiClient: OpenAI | null = null;
 const conversationHistory: Record<string, MessageHistory> = {};
 
 // Initialize Telnyx client
-const initTelnyx = async (): Promise<Telnyx> => {
-  if (!telnyxClient) {
-    const { default: TelnyxConstructor } = await import('telnyx');
-    telnyxClient = TelnyxConstructor(process.env.TELNYX_API_KEY);
-  }
-  return telnyxClient;
+const initTelnyx = async () => {
+  const { default: Telnyx } = await import('telnyx');
+  return Telnyx(process.env.TELNYX_API_KEY);
 };
 
 // Initialize OpenAI client
