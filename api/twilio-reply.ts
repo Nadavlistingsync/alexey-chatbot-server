@@ -21,14 +21,36 @@ interface TelnyxMessage {
   messaging_profile_id: string;
 }
 
+interface TelnyxWebhookPayload {
+  data: {
+    event_type: string;
+    payload: {
+      text: string;
+      from: {
+        phone_number: string;
+      };
+      to: Array<{
+        phone_number: string;
+      }>;
+    };
+  };
+}
+
 // State
 let openaiClient: OpenAI | null = null;
 const conversationHistory: Record<string, MessageHistory> = {};
 
 // Initialize Telnyx client
 const initTelnyx = async () => {
-  const { default: Telnyx } = await import('telnyx');
-  return Telnyx(process.env.TELNYX_API_KEY);
+  try {
+    const { default: Telnyx } = await import('telnyx');
+    const client = Telnyx(process.env.TELNYX_API_KEY);
+    console.log('✅ Telnyx client initialized successfully');
+    return client;
+  } catch (error) {
+    console.error('❌ Failed to initialize Telnyx client:', error);
+    throw error;
+  }
 };
 
 // Initialize OpenAI client
@@ -110,14 +132,22 @@ async function generateReplyWithGPT(message: string, from: string): Promise<stri
 async function sendMessage(message: TelnyxMessage): Promise<void> {
   const telnyx = await initTelnyx();
   try {
-    await telnyx.messages.create(message);
-    console.log('✅ Message sent successfully:', {
+    console.log('📤 Sending message via Telnyx:', {
       to: message.to,
       hasImage: !!message.media_urls,
-      textLength: message.text.length
+      textLength: message.text.length,
+      mediaUrls: message.media_urls
     });
+    
+    await telnyx.messages.create(message);
+    console.log('✅ Message sent successfully');
   } catch (err) {
-    console.error('❌ Telnyx send error:', err?.response?.data || err);
+    console.error('❌ Telnyx send error:', {
+      error: err,
+      response: err?.response?.data,
+      message: err?.message,
+      stack: err?.stack
+    });
     throw err;
   }
 }
@@ -125,31 +155,38 @@ async function sendMessage(message: TelnyxMessage): Promise<void> {
 export { generateReplyWithGPT, conversationHistory, appendHistory };
 
 export default async function handler(req: any, res: any) {
+  console.log('📨 Received webhook request');
+  
   // Only process inbound texts
-  if (req.method !== 'POST') return res.status(405).end();
-  
-  const evt = req.body.data?.event_type;
-  console.log('Telnyx event_type:', evt);
-  
-  if (evt !== 'message.received') {
-    console.log('⏩ skipping event_type:', evt);
-    return res.status(200).end();
+  if (req.method !== 'POST') {
+    console.log('❌ Invalid method:', req.method);
+    return res.status(405).end();
   }
-  
-  console.log('Incoming SMS payload:', JSON.stringify(req.body));
-  
+
   try {
-    const body = req.body;
-    const message = ((body.data?.payload?.text || '').trim() || '').toLowerCase();
-    const from = body.data?.payload?.from?.phone_number;
-    const to = body.data?.payload?.to?.[0]?.phone_number;
+    const payload = req.body as TelnyxWebhookPayload;
+    console.log('📦 Webhook payload:', JSON.stringify(payload, null, 2));
+
+    if (!payload?.data?.event_type) {
+      console.log('❌ Invalid payload structure');
+      return res.status(400).json({ error: 'Invalid payload structure' });
+    }
+
+    if (payload.data.event_type !== 'message.received') {
+      console.log('⏩ Skipping non-message event:', payload.data.event_type);
+      return res.status(200).end();
+    }
+
+    const message = (payload.data.payload.text || '').trim();
+    const from = payload.data.payload.from?.phone_number;
+    const to = payload.data.payload.to?.[0]?.phone_number;
 
     if (!from || !to || !message) {
+      console.log('❌ Missing required fields:', { from, to, message });
       return res.status(400).json({ error: 'Missing required fields', from, to, message });
     }
 
-    console.log('📩 Message received from:', from);
-    console.log('📨 Message content:', message);
+    console.log('📩 Processing message:', { from, to, message });
 
     // Append user message
     appendHistory(from, 'User', message);
@@ -175,26 +212,35 @@ export default async function handler(req: any, res: any) {
         console.log('📸 Sending MMS with image:', CONFIG.ALEXEY_IMAGE_URL);
       }
 
-      console.log('📤 Attempting to send message via Telnyx:', {
-        to: messageData.to,
-        hasImage: !!messageData.media_urls,
-        textLength: messageData.text.length
-      });
-      
       await sendMessage(messageData);
       appendHistory(from, 'Bot', reply);
+      
+      return res.status(200).json({ 
+        status: 'Message sent', 
+        reply,
+        hasImage: containsLink(reply)
+      });
     } catch (err) {
-      console.error('❌ Telnyx send error:', err?.response?.data || err);
-      return res.status(500).json({ error: 'Failed to send message', details: err?.response?.data || err });
+      console.error('❌ Failed to send message:', {
+        error: err,
+        response: err?.response?.data,
+        message: err?.message,
+        stack: err?.stack
+      });
+      return res.status(500).json({ 
+        error: 'Failed to send message', 
+        details: err?.response?.data || err 
+      });
     }
-    
-    return res.status(200).json({ 
-      status: 'Message sent', 
-      reply,
-      hasImage: containsLink(reply)
-    });
   } catch (error) {
-    console.error('Handler error:', error);
-    return res.status(500).json({ error: error.message, stack: error.stack });
+    console.error('❌ Handler error:', {
+      error,
+      message: error?.message,
+      stack: error?.stack
+    });
+    return res.status(500).json({ 
+      error: error.message, 
+      stack: error.stack 
+    });
   }
 }
