@@ -1,12 +1,3 @@
-let telnyx;
-const initTelnyx = async () => {
-  if (!telnyx) {
-    const { default: Telnyx } = await import('telnyx');
-    telnyx = Telnyx(process.env.TELNYX_API_KEY);
-  }
-  return telnyx;
-};
-
 // Configuration
 const CONFIG = {
   ALEXEY_IMAGE_URL: 'https://i.ibb.co/G3nk5LcK/Screenshot-2025-04-26-at-6-35-21-PM.png',
@@ -22,6 +13,23 @@ const MessageHistory = {
 
 // State
 const conversationHistory = {};
+
+// Telnyx client caching with proper ESM imports
+let telnyxClient = null;
+const initTelnyx = async () => {
+  if (!telnyxClient) {
+    try {
+      console.log('🔑 Initializing Telnyx client...');
+      const telnyxModule = await import('telnyx');
+      telnyxClient = telnyxModule.default(process.env.TELNYX_API_KEY);
+      console.log('✅ Telnyx client initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize Telnyx client:', error);
+      throw new Error('Failed to initialize Telnyx client');
+    }
+  }
+  return telnyxClient;
+};
 
 // Append to history and trim to last N entries
 function appendHistory(from, role, text) {
