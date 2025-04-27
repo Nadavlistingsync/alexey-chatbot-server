@@ -1,4 +1,6 @@
-"use server";
+import { NextResponse } from 'next/server';
+
+export const runtime = 'nodejs';
 
 let Telnyx;
 const initModules = async () => {
@@ -115,10 +117,10 @@ export async function POST(req) {
 
     if (!from || !to || !message) {
       console.error('[ALBERT] Missing required fields:', { from, to, message });
-      return new Response(JSON.stringify({ error: "Missing required fields", from, to, message }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
+      return NextResponse.json(
+        { error: "Missing required fields", from, to, message },
+        { status: 400 }
+      );
     }
 
     // Append user message
@@ -165,19 +167,16 @@ export async function POST(req) {
       });
     }
     
-    return new Response(JSON.stringify({ status: "Message sent", reply }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
+    return NextResponse.json({ status: "Message sent", reply });
   } catch (error) {
     console.error('[ALBERT] Handler error:', {
       error: error.message,
       stack: error.stack,
       timestamp: new Date().toISOString()
     });
-    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return NextResponse.json(
+      { error: error.message, stack: error.stack },
+      { status: 500 }
+    );
   }
 }
