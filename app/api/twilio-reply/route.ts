@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 
+// Next.js configuration
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+
 // Types
 interface TelnyxWebhookPayload {
   data: {
