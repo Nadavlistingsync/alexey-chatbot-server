@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel start",
-    "build": "tsc"
+    "dev": "next dev",
+    "start": "next start",
+    "build": "next build"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,7 @@
   "homepage": "https://github.com/Nadavlistingsync/alexey-chatbot-server#readme",
   "description": "",
   "dependencies": {
+    "next": "14.2.4",
     "openai": "^4.0.0",
     "telnyx": "^2.0.0"
   },
