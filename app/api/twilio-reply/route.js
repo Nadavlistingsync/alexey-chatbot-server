@@ -1,5 +1,6 @@
 "use server";
-export const runtime = 'nodejs';
+
+import { runtime } from './config';
 
 let Telnyx;
 const initModules = async () => {
