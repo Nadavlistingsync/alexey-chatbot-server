@@ -1,17 +1,16 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 import TelnyxAPI from 'telnyx';
 
 // Initialize Telnyx client
 const telnyx = TelnyxAPI(process.env.TELNYX_API_KEY);
 
-// Initialize OpenAI configuration
-const configuration = new Configuration({
+// Initialize OpenAI client
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 // Initialize conversation history
 let conversationHistory = [];
@@ -32,7 +31,7 @@ async function generateGPTResponse(userMessage) {
   try {
     updateConversationHistory('user', userMessage);
 
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -43,7 +42,7 @@ async function generateGPTResponse(userMessage) {
       ],
     });
 
-    const response = completion.data.choices[0].message.content;
+    const response = completion.choices[0].message.content;
     console.log('Generated AI response:', response);
     
     updateConversationHistory('assistant', response);
