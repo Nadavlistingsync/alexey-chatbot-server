@@ -26,7 +26,7 @@ function updateConversationHistory(role, content) {
 
 // Function to generate GPT response
 async function generateGPTResponse(userMessage) {
-  console.log('Generating AI response for message:', userMessage);
+  console.log('[ALBERT] Generating AI response for message:', userMessage);
   
   try {
     updateConversationHistory('user', userMessage);
@@ -43,24 +43,26 @@ async function generateGPTResponse(userMessage) {
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Generated AI response:', response);
+    console.log('[ALBERT] Generated AI response:', response);
     
     updateConversationHistory('assistant', response);
     return response;
   } catch (error) {
-    console.error('Error generating GPT response:', error);
+    console.error('[ALBERT] Error generating GPT response:', error);
     return 'I apologize, but I am having trouble processing your message right now. Please try again later.';
   }
 }
 
 export async function POST(req) {
+  console.log('[ALBERT] Webhook received at:', new Date().toISOString());
+  
   try {
     const data = await req.json();
-    console.log('Received webhook payload:', JSON.stringify(data, null, 2));
+    console.log('[ALBERT] Received webhook payload:', JSON.stringify(data, null, 2));
 
     // Only process message.received events
     if (data.data?.event_type !== 'message.received') {
-      console.log('Ignoring non-message event:', data.data?.event_type);
+      console.log('[ALBERT] Ignoring non-message event:', data.data?.event_type);
       return NextResponse.json({ 
         message: 'Ignored non-message event' 
       }, { status: 200 });
@@ -70,22 +72,24 @@ export async function POST(req) {
     const messageText = data.data.payload.text;
     const fromNumber = data.data.payload.from.phone_number;
 
-    console.log('Processing incoming message:', {
+    console.log('[ALBERT] Processing incoming message:', {
       from: fromNumber,
-      text: messageText
+      text: messageText,
+      timestamp: new Date().toISOString()
     });
 
     if (!messageText) {
-      console.log('No message text provided');
+      console.log('[ALBERT] No message text provided');
       return NextResponse.json({ error: 'No message text provided' }, { status: 400 });
     }
 
     // Generate response using GPT
     const gptResponse = await generateGPTResponse(messageText);
 
-    console.log('Sending response via Telnyx:', {
+    console.log('[ALBERT] Sending response via Telnyx:', {
       to: fromNumber,
-      text: gptResponse
+      text: gptResponse,
+      timestamp: new Date().toISOString()
     });
 
     // Send response using Telnyx
@@ -96,7 +100,10 @@ export async function POST(req) {
       messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
     });
 
-    console.log('Successfully sent response:', telnyxResponse);
+    console.log('[ALBERT] Successfully sent response:', {
+      telnyxResponse,
+      timestamp: new Date().toISOString()
+    });
 
     return NextResponse.json({ 
       success: true, 
@@ -105,7 +112,11 @@ export async function POST(req) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('[ALBERT] Error processing webhook:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
     return NextResponse.json({ 
       error: 'Failed to process webhook',
       details: error.message 
