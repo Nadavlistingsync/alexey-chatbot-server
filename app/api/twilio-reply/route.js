@@ -1,3 +1,5 @@
+"use server";
+
 let Telnyx;
 const initModules = async () => {
   if (!Telnyx) {
