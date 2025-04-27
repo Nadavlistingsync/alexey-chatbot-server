@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     try {
       // Initialize Telnyx client
       const { default: Telnyx } = await import('telnyx');
-      const telnyx = new Telnyx(process.env.TELNYX_API_KEY);
+      const telnyx = Telnyx(process.env.TELNYX_API_KEY);
 
       // Send MMS
       await telnyx.messages.create({
