@@ -1,6 +1,8 @@
 "use server";
 
-import { runtime } from './config';
+// Route segment config
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 let Telnyx;
 const initModules = async () => {
