@@ -25,36 +25,50 @@ Always use a relaxed and friendly tone. Every message must be a GPT response, no
     temperature: 0.7
   };
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+  try {
+    console.log('[GPT] Sending prompt to OpenAI:', userMessage);
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    console.log('[GPT] OpenAI response:', data);
+    return data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+  } catch (err) {
+    console.error('[GPT] Error calling OpenAI:', err);
+    return 'Sorry, there was an error generating a response.';
+  }
 }
 
 // In-memory log for demo (replace with DB in production)
 const conversationLog = [];
 
 export async function POST(req) {
-  const body = await req.json();
-  const userMessage = body.data?.payload?.text || '';
-  const fromNumber = body.data?.payload?.from || '';
+  try {
+    const body = await req.json();
+    console.log('[Webhook] Incoming payload:', JSON.stringify(body));
+    const userMessage = body.data?.payload?.text || '';
+    const fromNumber = body.data?.payload?.from || '';
 
-  // Check for 'currently listed' (manual review)
-  if (/currently listed/i.test(userMessage)) {
-    conversationLog.push({ from: fromNumber, message: userMessage, response: null, manual: true, timestamp: new Date().toISOString() });
-    return NextResponse.json({ message: 'Message logged for manual review.', manual: true });
+    // Check for 'currently listed' (manual review)
+    if (/currently listed/i.test(userMessage)) {
+      console.log('[Webhook] Message flagged for manual review:', userMessage);
+      conversationLog.push({ from: fromNumber, message: userMessage, response: null, manual: true, timestamp: new Date().toISOString() });
+      return NextResponse.json({ message: 'Message logged for manual review.', manual: true });
+    }
+
+    // Generate GPT response
+    const gptResponse = await getGptResponse(userMessage);
+    conversationLog.push({ from: fromNumber, message: userMessage, response: gptResponse, timestamp: new Date().toISOString() });
+    console.log('[Webhook] GPT response:', gptResponse);
+
+    return NextResponse.json({ reply: gptResponse, timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error('[Webhook] Error in handler:', err);
+    return NextResponse.json({ error: 'Internal server error', details: err?.message }, { status: 500 });
   }
-
-  // Generate GPT response
-  const gptResponse = await getGptResponse(userMessage);
-  conversationLog.push({ from: fromNumber, message: userMessage, response: gptResponse, timestamp: new Date().toISOString() });
-
-  return NextResponse.json({ reply: gptResponse, timestamp: new Date().toISOString() });
 } 
