@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "routes": [
     {
       "src": "/api/twilio-reply",
@@ -14,8 +8,7 @@
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers": "Content-Type"
-      },
-      "maxDuration": 30
+      }
     },
     {
       "src": "/api/telnyx-reply",
@@ -24,16 +17,7 @@
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers": "Content-Type"
-      },
-      "maxDuration": 30
+      }
     }
-  ],
-  "functions": {
-    "api/twilio-reply": {
-      "maxDuration": 30
-    },
-    "api/telnyx-reply": {
-      "maxDuration": 30
-    }
-  }
+  ]
 } 

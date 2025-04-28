@@ -4,6 +4,9 @@ const nextConfig = {
     appDir: true
   },
   output: 'standalone',
+  serverRuntimeConfig: {
+    maxDuration: 30
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
