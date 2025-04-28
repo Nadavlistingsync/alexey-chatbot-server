@@ -4,16 +4,13 @@ import { NextResponse } from 'next/server';
 
 // You will need to set your OpenAI API key in the environment
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const TELNYX_API_KEY = process.env.TELNYX_API_KEY;
+const TELNYX_MESSAGING_PROFILE_ID = process.env.TELNYX_MESSAGING_PROFILE_ID;
+const TELNYX_FROM_NUMBER = process.env.TELNYX_FROM_NUMBER;
 
 // Helper to call OpenAI GPT
 async function getGptResponse(userMessage) {
-  const systemPrompt = `You are Alexey, a relaxed and friendly real estate expert. Your goals are:
-1. Make sure the seller knows everything about you and encourage them to watch your videos.
-2. Find out if they are interested in selling their property for a reasonable price, based on recently sold comparable properties. If yes, ask if it's OK to reach out to them (no need to book an appointment).
-3. If the answer is negative (wrong number, sold, not selling, off market, not my property, lived there 10 years ago, take me off your list, how did you get my number, I'm a realtor, broker owner, my wife is the listing agent), politely move on.
-4. If the answer is 'currently listed', do not reply and log for manual review.
-5. If the answer is positive (yes, still want to sell, available, bring a buyer, send me an offer, do you want to buy it, how much can I get, sure), keep it casual and friendly, and try to move the conversation forward.
-Always use a relaxed and friendly tone. Every message must be a GPT response, not a set reply.`;
+  const systemPrompt = `You are Bot Albert, a friendly SMS assistant for real estate agent Alexey Kogan.\n\nYour mission is simple:\n- Respond casually, like a real person texting. (Never robotic.)\n- When someone shows interest (positive words like "interested", "tell me more", "yes"), reply warmly and ask if they would like a free property analysis, or if they'd like to know about their local market value.\n- If someone says no, not interested, or is rude, politely say: "No worries! Feel free to reach out anytime." and end the conversation.\n- If someone asks a question about a property, answer briefly and offer to send a full info sheet.\n- Never schedule meetings, set prices, or make promises. Always offer to send more information instead.\n- Keep your messages short (1-2 sentences), natural, and easygoing — like texting a friend.\n- If unsure, always lean toward being polite and helpful rather than pushing.\n- Always include these two links with images (never send them alone): https://www.zillow.com/profile/Alexey%20Kogan and https://floridalistingsre.com`;
 
   const payload = {
     model: 'gpt-3.5-turbo',
@@ -44,6 +41,34 @@ Always use a relaxed and friendly tone. Every message must be a GPT response, no
   }
 }
 
+// Helper to send SMS via Telnyx
+async function sendSms(to, message) {
+  const payload = {
+    from: TELNYX_FROM_NUMBER,
+    to,
+    text: message,
+    messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
+  };
+
+  try {
+    console.log('[Telnyx SMS] Sending SMS:', payload);
+    const response = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TELNYX_API_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    console.log('[Telnyx SMS] Outbound SMS response:', data);
+    return data;
+  } catch (err) {
+    console.error('[Telnyx SMS] Error sending SMS:', err);
+    return null;
+  }
+}
+
 // In-memory log for demo (replace with DB in production)
 const conversationLog = [];
 
@@ -52,7 +77,7 @@ export async function POST(req) {
     const body = await req.json();
     console.log('[Webhook] Incoming payload:', JSON.stringify(body));
     const userMessage = body.data?.payload?.text || '';
-    const fromNumber = body.data?.payload?.from || '';
+    const fromNumber = body.data?.payload?.from?.phone_number || body.data?.payload?.from || '';
 
     // Check for 'currently listed' (manual review)
     if (/currently listed/i.test(userMessage)) {
@@ -65,6 +90,11 @@ export async function POST(req) {
     const gptResponse = await getGptResponse(userMessage);
     conversationLog.push({ from: fromNumber, message: userMessage, response: gptResponse, timestamp: new Date().toISOString() });
     console.log('[Webhook] GPT response:', gptResponse);
+
+    // Send SMS reply
+    if (fromNumber && gptResponse) {
+      await sendSms(fromNumber, gptResponse);
+    }
 
     return NextResponse.json({ reply: gptResponse, timestamp: new Date().toISOString() });
   } catch (err) {
