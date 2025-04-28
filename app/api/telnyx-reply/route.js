@@ -1,12 +1,15 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 // You will need to set your OpenAI API key in the environment
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const TELNYX_API_KEY = process.env.TELNYX_API_KEY;
 const TELNYX_MESSAGING_PROFILE_ID = process.env.TELNYX_MESSAGING_PROFILE_ID;
 const TELNYX_FROM_NUMBER = process.env.TELNYX_FROM_NUMBER;
+const CONTACTS_PATH = path.resolve('./contacts.json');
 
 // Helper to call OpenAI GPT
 async function getGptResponse(userMessage) {
@@ -78,6 +81,37 @@ export async function POST(req) {
     console.log('[Webhook] Incoming payload:', JSON.stringify(body));
     const userMessage = body.data?.payload?.text || '';
     const fromNumber = body.data?.payload?.from?.phone_number || body.data?.payload?.from || '';
+
+    // STOP keyword handling
+    if (/\bstop\b/i.test(userMessage) && fromNumber) {
+      let contacts = [];
+      try {
+        contacts = JSON.parse(fs.readFileSync(CONTACTS_PATH, 'utf-8'));
+      } catch (err) {
+        contacts = [];
+      }
+      const filtered = contacts.filter(c => c.phone !== fromNumber);
+      fs.writeFileSync(CONTACTS_PATH, JSON.stringify(filtered, null, 2));
+      await sendSms(fromNumber, 'You have been unsubscribed. Have a great day!');
+      return NextResponse.json({ reply: 'You have been unsubscribed. Have a great day!', timestamp: new Date().toISOString() });
+    }
+
+    // --- Add or update contact for follow-up scheduling ---
+    if (fromNumber) {
+      let contacts = [];
+      try {
+        contacts = JSON.parse(fs.readFileSync(CONTACTS_PATH, 'utf-8'));
+      } catch (err) {
+        contacts = [];
+      }
+      const exists = contacts.some(c => c.phone === fromNumber);
+      if (!exists) {
+        contacts.push({ phone: fromNumber, followUpCount: 0, lastFollowUpDate: null, status: 'pending' });
+        fs.writeFileSync(CONTACTS_PATH, JSON.stringify(contacts, null, 2));
+        console.log(`[FollowUp] Added new contact for follow-ups: ${fromNumber}`);
+      }
+    }
+    // --- End follow-up scheduling logic ---
 
     // Check for 'currently listed' (manual review)
     if (/currently listed/i.test(userMessage)) {
