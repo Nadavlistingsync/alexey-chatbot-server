@@ -96,7 +96,15 @@ export async function POST(req) {
       return NextResponse.json({ reply: 'You have been unsubscribed. Have a great day!', timestamp: new Date().toISOString() });
     }
 
-    // --- Add or update contact for follow-up scheduling ---
+    // Always send GPT reply for every inbound message (except STOP)
+    const gptResponse = await getGptResponse(userMessage);
+    conversationLog.push({ from: fromNumber, message: userMessage, response: gptResponse, timestamp: new Date().toISOString() });
+    console.log('[Webhook] GPT response:', gptResponse);
+    if (fromNumber && gptResponse) {
+      await sendSms(fromNumber, gptResponse);
+    }
+
+    // Only add to contacts.json if not present (for follow-up scheduling)
     if (fromNumber) {
       let contacts = [];
       try {
@@ -110,24 +118,6 @@ export async function POST(req) {
         fs.writeFileSync(CONTACTS_PATH, JSON.stringify(contacts, null, 2));
         console.log(`[FollowUp] Added new contact for follow-ups: ${fromNumber}`);
       }
-    }
-    // --- End follow-up scheduling logic ---
-
-    // Check for 'currently listed' (manual review)
-    if (/currently listed/i.test(userMessage)) {
-      console.log('[Webhook] Message flagged for manual review:', userMessage);
-      conversationLog.push({ from: fromNumber, message: userMessage, response: null, manual: true, timestamp: new Date().toISOString() });
-      return NextResponse.json({ message: 'Message logged for manual review.', manual: true });
-    }
-
-    // Generate GPT response
-    const gptResponse = await getGptResponse(userMessage);
-    conversationLog.push({ from: fromNumber, message: userMessage, response: gptResponse, timestamp: new Date().toISOString() });
-    console.log('[Webhook] GPT response:', gptResponse);
-
-    // Send SMS reply
-    if (fromNumber && gptResponse) {
-      await sendSms(fromNumber, gptResponse);
     }
 
     return NextResponse.json({ reply: gptResponse, timestamp: new Date().toISOString() });
