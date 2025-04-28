@@ -14,7 +14,8 @@
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers": "Content-Type"
-      }
+      },
+      "maxDuration": 30
     },
     {
       "src": "/api/telnyx-reply",
@@ -23,7 +24,8 @@
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST",
         "Access-Control-Allow-Headers": "Content-Type"
-      }
+      },
+      "maxDuration": 30
     }
   ],
   "functions": {
