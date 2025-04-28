@@ -25,5 +25,13 @@
         "Access-Control-Allow-Headers": "Content-Type"
       }
     }
-  ]
+  ],
+  "functions": {
+    "api/twilio-reply": {
+      "maxDuration": 30
+    },
+    "api/telnyx-reply": {
+      "maxDuration": 30
+    }
+  }
 } 
